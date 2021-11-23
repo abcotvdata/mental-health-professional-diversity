@@ -1,0 +1,120 @@
+---
+title: "Mental-Health-Diversity-Census-EEO-Data"
+author: "Grace Manthey"
+date: "11/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE}
+
+library(tidyverse)
+
+```
+
+
+```{r, echo=FALSE}
+
+cbsas <- read.csv("https://www2.census.gov/EEO_2014_2018/EEO_Tables_By_Geographic_Area/Core_Based_Statistical_Areas/EEOALL1W_P10.csv")
+cbsas$OCC_CODE <- as.character(cbsas$OCC_CODE)
+
+counties <- read.csv("https://www2.census.gov/EEO_2014_2018/EEO_Tables_By_Geographic_Area/State_County/EEOALL1W_P01.csv")
+counties$OCC_CODE <- as.character(counties$OCC_CODE)
+
+```
+
+
+
+```{r, echo=FALSE, warnings=FALSE}
+
+#OCC Codes I need:
+#1821 (Psychologists)
+#2001 (Counselors, social workers, and other community and social service specialists)
+#3601 (Nursing, psychiatric, and home health aides ) - NOT AS IMPORTANT
+#3150 (Other therapists - Not: Physical/Radiation/Occupational)
+
+
+
+counties_clean <- counties %>% 
+  filter(OCC_CODE == "0" | OCC_CODE == "1821" | OCC_CODE == "2001" | OCC_CODE == "3150") %>% 
+  filter(PROFLN == 1.0 | PROFLN == 3.0 | PROFLN == 5.0) %>%  #this filters out just the numbers for total & percent
+  mutate(GENDER = case_when( PROFLN == '1'  ~  'Total',
+                             PROFLN == '3'  ~  'Men',
+                             PROFLN == '5'  ~  'Women',
+                             TRUE  ~  'unknown')) %>% 
+  select(GEOID, GEONAME, PROFLN, TITLE, GENDER, OCC_CODE, OCC_DESCRIPTION, ESTIMATE_1, ESTIMATE_2, ESTIMATE_3, ESTIMATE_4, ESTIMATE_5, ESTIMATE_6, ESTIMATE_7, ESTIMATE_8) %>% 
+  rename(TOTAL = ESTIMATE_1,
+         HISP_LAT = ESTIMATE_2,
+         WHITE = ESTIMATE_3,
+         BLACK = ESTIMATE_4,
+         AM_ID = ESTIMATE_5,
+         ASIAN = ESTIMATE_6,
+         HI_PI = ESTIMATE_7,
+         OTHER = ESTIMATE_8) %>% 
+  mutate(TOTAL = as.numeric(gsub(",","",TOTAL)),
+         HISP_LAT = as.numeric(gsub(",","",HISP_LAT)),
+         WHITE = as.numeric(gsub(",","",WHITE)),
+         BLACK = as.numeric(gsub(",","",BLACK)),
+         AM_ID = as.numeric(gsub(",","",AM_ID)),
+         ASIAN = as.numeric(gsub(",","",ASIAN)),
+         HI_PI = as.numeric(gsub(",","",HI_PI)),
+         OTHER = as.numeric(gsub(",","",OTHER))
+         ) %>%  
+  mutate(PCT_HISP_LAT = round(((HISP_LAT/TOTAL)*100), digits = 2),
+         PCT_WHITE = round(((WHITE/TOTAL)*100), digits = 2),
+         PCT_BLACKT = round(((BLACK/TOTAL)*100), digits = 2),
+         PCT_AM_ID = round(((AM_ID/TOTAL)*100), digits = 2),
+         PCT_ASIAN = round(((ASIAN/TOTAL)*100), digits = 2),
+         PCT_HI_PI = round(((HI_PI/TOTAL)*100), digits = 2),
+         PCT_OTHER = round(((OTHER/TOTAL)*100), digits = 2))
+
+
+
+cbsas_clean <- cbsas %>% 
+  filter(OCC_CODE == "0" | OCC_CODE == "1821" | OCC_CODE == "2001" | OCC_CODE == "3150") %>% 
+  filter(PROFLN == 1.0 | PROFLN == 3.0 | PROFLN == 5.0) %>%  #this filters out just the numbers for total & percent
+  mutate(GENDER = case_when( PROFLN == '1'  ~  'Total',
+                             PROFLN == '3'  ~  'Men',
+                             PROFLN == '5'  ~  'Women',
+                             TRUE  ~  'unknown')) %>% 
+  select(GEOID, GEONAME, PROFLN, TITLE, GENDER, OCC_CODE, OCC_DESCRIPTION, ESTIMATE_1, ESTIMATE_2, ESTIMATE_3, ESTIMATE_4, ESTIMATE_5, ESTIMATE_6, ESTIMATE_7, ESTIMATE_8) %>% 
+  rename(TOTAL = ESTIMATE_1,
+         HISP_LAT = ESTIMATE_2,
+         WHITE = ESTIMATE_3,
+         BLACK = ESTIMATE_4,
+         AM_ID = ESTIMATE_5,
+         ASIAN = ESTIMATE_6,
+         HI_PI = ESTIMATE_7,
+         OTHER = ESTIMATE_8) %>% 
+  mutate(TOTAL = as.numeric(gsub(",","",TOTAL)),
+         HISP_LAT = as.numeric(gsub(",","",HISP_LAT)),
+         WHITE = as.numeric(gsub(",","",WHITE)),
+         BLACK = as.numeric(gsub(",","",BLACK)),
+         AM_ID = as.numeric(gsub(",","",AM_ID)),
+         ASIAN = as.numeric(gsub(",","",ASIAN)),
+         HI_PI = as.numeric(gsub(",","",HI_PI)),
+         OTHER = as.numeric(gsub(",","",OTHER))
+         ) %>% 
+  mutate(PCT_HISP_LAT = round(((HISP_LAT/TOTAL)*100), digits = 2),
+         PCT_WHITE = round(((WHITE/TOTAL)*100), digits = 2),
+         PCT_BLACKT = round(((BLACK/TOTAL)*100), digits = 2),
+         PCT_AM_ID = round(((AM_ID/TOTAL)*100), digits = 2),
+         PCT_ASIAN = round(((ASIAN/TOTAL)*100), digits = 2),
+         PCT_HI_PI = round(((HI_PI/TOTAL)*100), digits = 2),
+         PCT_OTHER = round(((OTHER/TOTAL)*100), digits = 2))
+  
+
+
+```
+
+
+```{r}
+
+unique(counties_clean$OCC_DESCRIPTION)
+	
+
+```
+
