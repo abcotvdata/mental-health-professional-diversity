@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r echo=FALSE}
 
 library(tidyverse)
+library(stringr)
 
 ```
 
@@ -113,8 +114,395 @@ cbsas_clean <- cbsas %>%
 
 ```{r}
 
-unique(counties_clean$OCC_DESCRIPTION)
+write.csv(counties_clean, 'mental_health_by_county.csv', row.names=FALSE)
+write.csv(cbsas_clean, 'mental_health_by_cbsa.csv', row.names=FALSE)
 	
+
+```
+
+```{r}
+
+#IPUMS OCCUPATION DATA
+
+ipums_occ <- read.csv('occupations.csv')
+ipums_occ <- ipums_occ %>% 
+  mutate(STATEFIP = as.character(str_pad(STATEFIP, 2, pad=0))) %>% 
+  mutate(COUNTYFIP = as.character(str_pad(COUNTYFIP, 3, pad=0))) %>% 
+  mutate(STCNTYFIP = paste(sep="", as.character(STATEFIP), as.character(COUNTYFIP))) %>% 
+  mutate(RACE_NEW = case_when(RACE == 1  ~  'WHITE',
+                              RACE == 2  ~  'BLACK',
+                              RACE == 3  ~  'AI-AN',
+                              RACE == 4  ~  'ASIAN-PI',
+                              RACE == 5  ~  'ASIAN-PI',
+                              RACE == 6  ~  'ASIAN-PI',
+                              RACE == 7  ~  'OTHER',
+                              RACE == 8  ~  'TWO-OR-MORE',
+                              RACE == 9  ~  'TWO-OR-MORE',
+                              TRUE  ~  'unknown')) %>% 
+  mutate(RACEETHNICITY = case_when(HISPAN == 0  ~  RACE_NEW,
+                                   HISPAN != 0  ~  'HISP-LAT',
+                                   TRUE  ~  'unknown')) %>%
+  mutate(GENDER = case_when(SEX == 1  ~  'MALE',
+                            SEX == 2  ~  'FEMALE',
+                            TRUE  ~  'unknown'))
+    
+
+```
+
+```{r}
+
+#counties all
+total_counties <- ipums_occ %>% 
+  group_by(STCNTYFIP) %>% 
+  summarise(TOTAL_POP = sum(PERWT))
+
+total_counties_race <- ipums_occ %>% 
+  group_by(STCNTYFIP, RACEETHNICITY) %>% 
+  summarise(population = sum(PERWT)) %>% 
+  pivot_wider(names_from=RACEETHNICITY, values_from = population) %>% 
+  mutate(OCC = "0000") %>%
+  mutate(OCCUPATION = "Total-Pop") %>% 
+  mutate(OCCUPATION_BROAD = "Total-Pop") %>% 
+  mutate(GENDER = "ALL")
+total_counties_race <- merge(total_counties, total_counties_race, by='STCNTYFIP')
+
+#counties gender
+total_counties_gender <- ipums_occ %>% 
+  group_by(STCNTYFIP, GENDER) %>% 
+  summarise(TOTAL_POP = sum(PERWT)) 
+
+total_counties_race_gender <- ipums_occ %>% 
+  group_by(STCNTYFIP, GENDER, RACEETHNICITY) %>% 
+  summarise(population = sum(PERWT)) %>% 
+  pivot_wider(names_from=RACEETHNICITY, values_from = population) %>% 
+  mutate(OCC = "0000") %>%
+  mutate(OCCUPATION = "Total-Pop") %>% 
+  mutate(OCCUPATION_BROAD = "Total-Pop")
+total_counties_race_gender <- merge(total_counties_gender, total_counties_race_gender, by.x=c('STCNTYFIP', 'GENDER'), by.y=c('STCNTYFIP', 'GENDER'))
+
+total_counties_race_gender_all <- rbind(total_counties_race, total_counties_race_gender)
+
+
+#metros all
+total_metros <- ipums_occ %>% 
+  group_by(MET2013) %>% 
+  summarise(TOTAL_POP = sum(PERWT)) 
+
+total_metros_race <- ipums_occ %>% 
+  group_by(MET2013, RACEETHNICITY) %>% 
+  summarise(population = sum(PERWT)) %>% 
+  pivot_wider(names_from=RACEETHNICITY, values_from = population) %>% 
+  mutate(OCC = "0000") %>%
+  mutate(OCCUPATION = "Total-Pop") %>% 
+  mutate(OCCUPATION_BROAD = "Total-Pop") %>% 
+  mutate(GENDER = "ALL")
+total_metros_race <- merge(total_metros, total_metros_race, by='MET2013')
+
+#metros gender
+total_metros_gender <- ipums_occ %>% 
+  group_by(MET2013, GENDER) %>% 
+  summarise(TOTAL_POP = sum(PERWT)) 
+
+total_metros_race_gender <- ipums_occ %>% 
+  group_by(MET2013, GENDER, RACEETHNICITY) %>% 
+  summarise(population = sum(PERWT)) %>% 
+  pivot_wider(names_from=RACEETHNICITY, values_from = population) %>% 
+  mutate(OCC = "0000") %>%
+  mutate(OCCUPATION = "Total-Pop") %>% 
+  mutate(OCCUPATION_BROAD = "Total-Pop")
+total_metros_race_gender <- merge(total_metros_gender, total_metros_race_gender, by.x=c('MET2013', 'GENDER'), by.y=c('MET2013', 'GENDER'))
+
+total_metros_race_gender_all <- rbind(total_metros_race, total_metros_race_gender)
+
+
+#states all
+total_states <- ipums_occ %>% 
+  group_by(STATEFIP) %>% 
+  summarise(TOTAL_POP = sum(PERWT)) 
+
+total_states_race <- ipums_occ %>% 
+  group_by(STATEFIP, RACEETHNICITY) %>% 
+  summarise(population = sum(PERWT)) %>% 
+  pivot_wider(names_from=RACEETHNICITY, values_from = population) %>% 
+  mutate(OCC = "0000") %>%
+  mutate(OCCUPATION = "Total-Pop") %>% 
+  mutate(OCCUPATION_BROAD = "Total-Pop") %>% 
+  mutate(GENDER = "ALL")
+total_states_race <- merge(total_states, total_states_race, by='STATEFIP')
+
+#states gender
+total_states_gender <- ipums_occ %>% 
+  group_by(STATEFIP, GENDER) %>% 
+  summarise(TOTAL_POP = sum(PERWT)) 
+
+total_states_race_gender <- ipums_occ %>% 
+  group_by(STATEFIP, GENDER, RACEETHNICITY) %>% 
+  summarise(population = sum(PERWT)) %>% 
+  pivot_wider(names_from=RACEETHNICITY, values_from = population) %>% 
+  mutate(OCC = "0000") %>%
+  mutate(OCCUPATION = "Total-Pop") %>% 
+  mutate(OCCUPATION_BROAD = "Total-Pop")
+total_states_race_gender <- merge(total_states_gender, total_states_race_gender, by.x=c('STATEFIP', 'GENDER'), by.y=c('STATEFIP', 'GENDER'))
+
+total_states_race_gender_all <- rbind(total_states_race, total_states_race_gender)
+
+
+```
+
+```{r}
+
+#filter out occupations 
+
+#Psychologists: 1821 - 1825
+#Counselors: 2001, 2003-2005
+#Mental Health Social Workers: 2013
+
+ipums_occ_mental_health <- ipums_occ %>% 
+  filter(OCC == 1821 | OCC == 1822 | OCC == 1823 | OCC == 1824 | OCC == 1825 | OCC == 2001 | OCC == 2003 | OCC == 2004 | OCC == 2005 | OCC == 2013)
+
+total_counties_mh <- ipums_occ_mental_health %>% 
+  group_by(STCNTYFIP, OCC) %>% 
+  summarise(TOTAL_POP = sum(PERWT))
+
+total_counties_race_mh <- ipums_occ_mental_health %>% 
+  group_by(STCNTYFIP, OCC, RACEETHNICITY) %>% 
+  summarise(population = sum(PERWT)) %>% 
+  pivot_wider(names_from=RACEETHNICITY, values_from = population) %>% 
+  mutate(GENDER = "ALL") %>% 
+  mutate(OCCUPATION = case_when(OCC == 1821  ~  'Clinical and counseling psychologists',
+                              OCC == 1822  ~  'School psychologists',
+                              OCC == 1825  ~  'Other psychologists',
+                              OCC == 2001  ~  'Substance abuse and behavioral disorder counselors',
+                              OCC == 2003  ~  'Marriage and family therapists',
+                              OCC == 2004  ~  'Mental health counselors',
+                              OCC == 2005  ~  'Rehabilitation counselors',
+                              OCC == 2013  ~  'Mental health and substance abuse social workers',
+                              TRUE  ~  'unknown')) %>% 
+  mutate(OCCUPATION_BROAD = case_when(OCC == 1821  ~  'Psychologists',
+                              OCC == 1822  ~  'Psychologists',
+                              OCC == 1825  ~  'Psychologists',
+                              OCC == 2001  ~  'Mental health counselors',
+                              OCC == 2003  ~  'Mental health counselors',
+                              OCC == 2004  ~  'Mental health counselors',
+                              OCC == 2005  ~  'Mental health counselors',
+                              OCC == 2013  ~  'Mental health and substance abuse social workers',
+                              TRUE  ~  'unknown'))
+total_counties_race_mh <- merge(total_counties_mh, total_counties_race_mh, by.x=c('STCNTYFIP', 'OCC'), by.y=c('STCNTYFIP', 'OCC'))
+
+#counties MH plus gender
+total_counties_mh_gender <- ipums_occ_mental_health %>% 
+  group_by(STCNTYFIP, GENDER, OCC) %>% 
+  summarise(TOTAL_POP = sum(PERWT))
+
+total_counties_race_mh_gender <- ipums_occ_mental_health %>% 
+  group_by(STCNTYFIP, GENDER, OCC, RACEETHNICITY) %>% 
+  summarise(population = sum(PERWT)) %>% 
+  pivot_wider(names_from=RACEETHNICITY, values_from = population) %>%
+  mutate(OCCUPATION = case_when(OCC == 1821  ~  'Clinical and counseling psychologists',
+                              OCC == 1822  ~  'School psychologists',
+                              OCC == 1825  ~  'Other psychologists',
+                              OCC == 2001  ~  'Substance abuse and behavioral disorder counselors',
+                              OCC == 2003  ~  'Marriage and family therapists',
+                              OCC == 2004  ~  'Mental health counselors',
+                              OCC == 2005  ~  'Rehabilitation counselors',
+                              OCC == 2013  ~  'Mental health and substance abuse social workers',
+                              TRUE  ~  'unknown')) %>% 
+  mutate(OCCUPATION_BROAD = case_when(OCC == 1821  ~  'Psychologists',
+                              OCC == 1822  ~  'Psychologists',
+                              OCC == 1825  ~  'Psychologists',
+                              OCC == 2001  ~  'Mental health counselors',
+                              OCC == 2003  ~  'Mental health counselors',
+                              OCC == 2004  ~  'Mental health counselors',
+                              OCC == 2005  ~  'Mental health counselors',
+                              OCC == 2013  ~  'Mental health and substance abuse social workers',
+                              TRUE  ~  'unknown'))
+total_counties_race_mh_gender <- merge(total_counties_mh_gender, total_counties_race_mh_gender, by.x=c('STCNTYFIP', 'GENDER', 'OCC'), by.y=c('STCNTYFIP', 'GENDER', 'OCC'))
+
+total_counties_race_gender_mh <- rbind(total_counties_race_mh, total_counties_race_mh_gender)
+
+
+#metros MH
+total_metros_mh <- ipums_occ_mental_health %>% 
+  group_by(MET2013, OCC) %>% 
+  summarise(TOTAL_POP = sum(PERWT))
+
+total_metros_race_mh <- ipums_occ_mental_health %>% 
+  group_by(MET2013, OCC, RACEETHNICITY) %>% 
+  summarise(population = sum(PERWT)) %>% 
+  pivot_wider(names_from=RACEETHNICITY, values_from = population) %>% 
+  mutate(GENDER = "ALL") %>% 
+  mutate(OCCUPATION = case_when(OCC == 1821  ~  'Clinical and counseling psychologists',
+                              OCC == 1822  ~  'School psychologists',
+                              OCC == 1825  ~  'Other psychologists',
+                              OCC == 2001  ~  'Substance abuse and behavioral disorder counselors',
+                              OCC == 2003  ~  'Marriage and family therapists',
+                              OCC == 2004  ~  'Mental health counselors',
+                              OCC == 2005  ~  'Rehabilitation counselors',
+                              OCC == 2013  ~  'Mental health and substance abuse social workers',
+                              TRUE  ~  'unknown')) %>% 
+  mutate(OCCUPATION_BROAD = case_when(OCC == 1821  ~  'Psychologists',
+                              OCC == 1822  ~  'Psychologists',
+                              OCC == 1825  ~  'Psychologists',
+                              OCC == 2001  ~  'Mental health counselors',
+                              OCC == 2003  ~  'Mental health counselors',
+                              OCC == 2004  ~  'Mental health counselors',
+                              OCC == 2005  ~  'Mental health counselors',
+                              OCC == 2013  ~  'Mental health and substance abuse social workers',
+                              TRUE  ~  'unknown'))
+total_metros_race_mh <- merge(total_metros_mh, total_metros_race_mh, by.x=c('MET2013', 'OCC'), by.y=c('MET2013', 'OCC'))
+
+#metros MH plus gender
+total_metros_mh_gender <- ipums_occ_mental_health %>% 
+  group_by(MET2013, GENDER, OCC) %>% 
+  summarise(TOTAL_POP = sum(PERWT))
+
+total_metros_race_mh_gender <- ipums_occ_mental_health %>% 
+  group_by(MET2013, GENDER, OCC, RACEETHNICITY) %>% 
+  summarise(population = sum(PERWT)) %>% 
+  pivot_wider(names_from=RACEETHNICITY, values_from = population) %>%
+  mutate(OCCUPATION = case_when(OCC == 1821  ~  'Clinical and counseling psychologists',
+                              OCC == 1822  ~  'School psychologists',
+                              OCC == 1825  ~  'Other psychologists',
+                              OCC == 2001  ~  'Substance abuse and behavioral disorder counselors',
+                              OCC == 2003  ~  'Marriage and family therapists',
+                              OCC == 2004  ~  'Mental health counselors',
+                              OCC == 2005  ~  'Rehabilitation counselors',
+                              OCC == 2013  ~  'Mental health and substance abuse social workers',
+                              TRUE  ~  'unknown')) %>% 
+  mutate(OCCUPATION_BROAD = case_when(OCC == 1821  ~  'Psychologists',
+                              OCC == 1822  ~  'Psychologists',
+                              OCC == 1825  ~  'Psychologists',
+                              OCC == 2001  ~  'Mental health counselors',
+                              OCC == 2003  ~  'Mental health counselors',
+                              OCC == 2004  ~  'Mental health counselors',
+                              OCC == 2005  ~  'Mental health counselors',
+                              OCC == 2013  ~  'Mental health and substance abuse social workers',
+                              TRUE  ~  'unknown'))
+total_metros_race_mh_gender <- merge(total_metros_mh_gender, total_metros_race_mh_gender, by.x=c('MET2013', 'GENDER', 'OCC'), by.y=c('MET2013', 'GENDER', 'OCC'))
+
+total_metros_race_gender_mh <- rbind(total_metros_race_mh, total_metros_race_mh_gender)
+
+
+
+#states MH
+total_states_mh <- ipums_occ_mental_health %>% 
+  group_by(STATEFIP, OCC) %>% 
+  summarise(TOTAL_POP = sum(PERWT))
+
+total_states_race_mh <- ipums_occ_mental_health %>% 
+  group_by(STATEFIP, OCC, RACEETHNICITY) %>% 
+  summarise(population = sum(PERWT)) %>% 
+  pivot_wider(names_from=RACEETHNICITY, values_from = population) %>% 
+  mutate(GENDER = "ALL") %>% 
+  mutate(OCCUPATION = case_when(OCC == 1821  ~  'Clinical and counseling psychologists',
+                              OCC == 1822  ~  'School psychologists',
+                              OCC == 1825  ~  'Other psychologists',
+                              OCC == 2001  ~  'Substance abuse and behavioral disorder counselors',
+                              OCC == 2003  ~  'Marriage and family therapists',
+                              OCC == 2004  ~  'Mental health counselors',
+                              OCC == 2005  ~  'Rehabilitation counselors',
+                              OCC == 2013  ~  'Mental health and substance abuse social workers',
+                              TRUE  ~  'unknown')) %>% 
+  mutate(OCCUPATION_BROAD = case_when(OCC == 1821  ~  'Psychologists',
+                              OCC == 1822  ~  'Psychologists',
+                              OCC == 1825  ~  'Psychologists',
+                              OCC == 2001  ~  'Mental health counselors',
+                              OCC == 2003  ~  'Mental health counselors',
+                              OCC == 2004  ~  'Mental health counselors',
+                              OCC == 2005  ~  'Mental health counselors',
+                              OCC == 2013  ~  'Mental health and substance abuse social workers',
+                              TRUE  ~  'unknown'))
+total_states_race_mh <- merge(total_states_mh, total_states_race_mh, by.x=c('STATEFIP', 'OCC'), by.y=c('STATEFIP', 'OCC'))
+
+
+#states MH plus gender
+total_states_mh_gender <- ipums_occ_mental_health %>% 
+  group_by(STATEFIP, GENDER, OCC) %>% 
+  summarise(TOTAL_POP = sum(PERWT))
+
+total_states_race_mh_gender <- ipums_occ_mental_health %>% 
+  group_by(STATEFIP, GENDER, OCC, RACEETHNICITY) %>% 
+  summarise(population = sum(PERWT)) %>% 
+  pivot_wider(names_from=RACEETHNICITY, values_from = population) %>%
+  mutate(OCCUPATION = case_when(OCC == 1821  ~  'Clinical and counseling psychologists',
+                              OCC == 1822  ~  'School psychologists',
+                              OCC == 1825  ~  'Other psychologists',
+                              OCC == 2001  ~  'Substance abuse and behavioral disorder counselors',
+                              OCC == 2003  ~  'Marriage and family therapists',
+                              OCC == 2004  ~  'Mental health counselors',
+                              OCC == 2005  ~  'Rehabilitation counselors',
+                              OCC == 2013  ~  'Mental health and substance abuse social workers',
+                              TRUE  ~  'unknown')) %>% 
+  mutate(OCCUPATION_BROAD = case_when(OCC == 1821  ~  'Psychologists',
+                              OCC == 1822  ~  'Psychologists',
+                              OCC == 1825  ~  'Psychologists',
+                              OCC == 2001  ~  'Mental health counselors',
+                              OCC == 2003  ~  'Mental health counselors',
+                              OCC == 2004  ~  'Mental health counselors',
+                              OCC == 2005  ~  'Mental health counselors',
+                              OCC == 2013  ~  'Mental health and substance abuse social workers',
+                              TRUE  ~  'unknown'))
+total_states_race_mh_gender <- merge(total_states_mh_gender, total_states_race_mh_gender, by.x=c('STATEFIP', 'GENDER', 'OCC'), by.y=c('STATEFIP', 'GENDER', 'OCC'))
+
+total_states_race_gender_mh <- rbind(total_states_race_mh, total_states_race_mh_gender)
+
+
+
+```
+
+```{r}
+state_names <- read.csv('State-Fips.csv') %>% 
+  mutate(STATEFIP = as.character(str_pad(STATEFIP, 2, pad=0)))
+metro_names <- read.csv('Metro_Areas.csv') %>% 
+  mutate(MET2013 = as.character(str_pad(MET2013, 5, pad=0)))
+county_names <- read.csv('State-County-Fips.csv') %>% 
+  mutate(STCNTYFIP = as.character(str_pad(STCNTYFIP, 5, pad=0)))
+```
+
+```{r}
+
+#rbind all together
+
+counties_mh_professionals <- rbind(total_counties_race_gender_mh, total_counties_race_gender_all) %>% 
+  mutate(`PCT_WHITE` = round(((`WHITE`/TOTAL_POP)*100), digits=2)) %>% 
+  mutate(`PCT_AI-AN` = round(((`AI-AN`/TOTAL_POP)*100), digits=2)) %>% 
+  mutate(`PCT_BLACK` = round(((`BLACK`/TOTAL_POP)*100), digits=2)) %>%
+  mutate(`PCT_HISP-LAT` = round(((`HISP-LAT`/TOTAL_POP)*100), digits=2)) %>%
+  mutate(`PCT_TWO-OR-MORE` = round(((`TWO-OR-MORE`/TOTAL_POP)*100), digits=2)) %>%
+  mutate(`PCT_OTHER` = round(((`OTHER`/TOTAL_POP)*100), digits=2))
+
+counties_mh_professionals <- merge(counties_mh_professionals, county_names, by='STCNTYFIP') %>%
+  select(STCNTYFIP, STATE, COUNTY, OCC, OCCUPATION, OCCUPATION_BROAD, GENDER, TOTAL_POP, `HISP-LAT`, WHITE, `AI-AN`, BLACK, `TWO-OR-MORE`, OTHER, `PCT_HISP-LAT`, PCT_WHITE, `PCT_AI-AN`, PCT_BLACK, `PCT_TWO-OR-MORE`, PCT_OTHER)
+  
+
+write.csv(counties_mh_professionals, "counties_mh_professionals_IPUMS.csv", row.names = FALSE)
+
+metros_mh_professionals <- rbind(total_metros_race_gender_mh, total_metros_race_gender_all) %>% 
+  mutate(`PCT_WHITE` = round(((`WHITE`/TOTAL_POP)*100), digits=2)) %>% 
+  mutate(`PCT_AI-AN` = round(((`AI-AN`/TOTAL_POP)*100), digits=2)) %>% 
+  mutate(`PCT_BLACK` = round(((`BLACK`/TOTAL_POP)*100), digits=2)) %>%
+  mutate(`PCT_HISP-LAT` = round(((`HISP-LAT`/TOTAL_POP)*100), digits=2)) %>%
+  mutate(`PCT_TWO-OR-MORE` = round(((`TWO-OR-MORE`/TOTAL_POP)*100), digits=2)) %>%
+  mutate(`PCT_OTHER` = round(((`OTHER`/TOTAL_POP)*100), digits=2)) %>%
+  filter(MET2013 != 0)
+
+metros_mh_professionals <- merge(metros_mh_professionals, metro_names, by='MET2013') %>%
+  select(MET2013, METRO_AREA, OCC, OCCUPATION, OCCUPATION_BROAD, GENDER, TOTAL_POP, `HISP-LAT`, WHITE, `AI-AN`, BLACK, `TWO-OR-MORE`, OTHER, `PCT_HISP-LAT`, PCT_WHITE, `PCT_AI-AN`, PCT_BLACK, `PCT_TWO-OR-MORE`, PCT_OTHER)
+
+write.csv(metros_mh_professionals, "metros_mh_professionals_IPUMS.csv", row.names = FALSE)
+
+states_mh_professionals <- rbind(total_states_race_gender_mh, total_states_race_gender_all) %>% 
+  mutate(`PCT_WHITE` = round(((`WHITE`/TOTAL_POP)*100), digits=2)) %>% 
+  mutate(`PCT_AI-AN` = round(((`AI-AN`/TOTAL_POP)*100), digits=2)) %>% 
+  mutate(`PCT_BLACK` = round(((`BLACK`/TOTAL_POP)*100), digits=2)) %>%
+  mutate(`PCT_HISP-LAT` = round(((`HISP-LAT`/TOTAL_POP)*100), digits=2)) %>%
+  mutate(`PCT_TWO-OR-MORE` = round(((`TWO-OR-MORE`/TOTAL_POP)*100), digits=2)) %>%
+  mutate(`PCT_OTHER` = round(((`OTHER`/TOTAL_POP)*100), digits=2))
+
+states_mh_professionals <- merge(states_mh_professionals, state_names, by='STATEFIP') %>%
+  select(STATEFIP, STATE_NAME, OCC, OCCUPATION, OCCUPATION_BROAD, GENDER, TOTAL_POP, `HISP-LAT`, WHITE, `AI-AN`, BLACK, `TWO-OR-MORE`, OTHER, `PCT_HISP-LAT`, PCT_WHITE, `PCT_AI-AN`, PCT_BLACK, `PCT_TWO-OR-MORE`, PCT_OTHER)
+
+write.csv(states_mh_professionals, "states_mh_professionals_IPUMS.csv", row.names = FALSE)
 
 ```
 
